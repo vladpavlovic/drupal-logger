@@ -60,9 +60,22 @@ class WatchdogLogger extends AbstractLogger
           return;
         }
 
-        // This is pretty hacky. Basically, we want to know what called the log
-        $trace    = debug_backtrace();
-        $index    = isset($trace[1]['class']) && $trace[1]['class'] == 'Psr\Log\AbstractLogger' ? 2 : 1;
+        // This is pretty hacky. Basically, we want to find the first thing that
+        // isn't a logger, and assume that is the actual caller.
+        $trace = debug_backtrace();
+        $index = 1;
+
+        foreach($trace as $key => $entry) {
+            if (isset($entry['class'])) {
+                $interfaces = class_implements($entry['class']);
+
+                if (empty($interfaces['Psr\Log\LoggerInterface'])) {
+                    $index = $key;
+                    break;
+                }
+            }
+        }
+
         $facility = $trace[$index]['function'];
 
         if (!empty($trace[$index]['class'])) {
